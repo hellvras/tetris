@@ -1,0 +1,33 @@
+export const COLORS = {
+    I: '#33ffff',
+    O: '#ffee33',
+    T: '#dd33ff',
+    S: '#33ff88',
+    Z: '#ff4444',
+    J: '#3388ff',
+    L: '#ffaa22',
+};
+
+export const PIECES = {
+    I: { shape: [[0,0,0,0],
+                 [1,1,1,1],
+                 [0,0,0,0],
+                 [0,0,0,0]], color: COLORS.I },
+    O: { shape: [[1,1],
+                 [1,1]], color: COLORS.O },
+    T: { shape: [[0,1,0],
+                 [1,1,1],
+                 [0,0,0]], color: COLORS.T },
+    S: { shape: [[0,1,1],
+                 [1,1,0],
+                 [0,0,0]], color: COLORS.S },
+    Z: { shape: [[1,1,0],
+                 [0,1,1],
+                 [0,0,0]], color: COLORS.Z },
+    J: { shape: [[1,0,0],
+                 [1,1,1],
+                 [0,0,0]], color: COLORS.J },
+    L: { shape: [[0,0,1],
+                 [1,1,1],
+                 [0,0,0]], color: COLORS.L },
+};

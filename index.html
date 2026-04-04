@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="overlay.css" />
+        <link rel="stylesheet" href="highscore.css" />
+        <script src="/background/background.js" type="module"></script>
+        <script src="/game/game.js" type="module"></script>
+    </head>
+    <body>
+        
+        <canvas id="background"></canvas>
+        
+        
+        <div id="gameWrapper">
+            
+                <div id="canvasWrapper">
+                    <canvas id="game"></canvas>
+                    <div id="overlay">
+                        <h1>TETRIS</h1>
+                        <button id="startBtn">START</button>
+                    </div>
+                </div>
+                <div id="highscores">
+                    <h2>HIGHSCORE</h2>
+                    <ol id="highscoreList"></ol>
+                </div>
+            
+        </div>
+        
+    </body>
+</html>
