@@ -1,24 +1,34 @@
 import { Tetris } from './tetris.js';
 
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const tetris = new Tetris(canvas, ctx);
+const canvas  = document.getElementById('game');
+const ctx     = canvas.getContext('2d');
+const tetris  = new Tetris(canvas, ctx);
 const overlay = document.getElementById('overlay');
 const startBtn = document.getElementById('startBtn');
+const gameKeys = new Set(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','z','x','c']);
+
+const keysDown = new Set();
+let dasTimer = null;
+let arrTimer = null;
+let scoreSaved = false;
+
+const DAS = 150;
+const ARR = 50;
 
 startBtn.addEventListener('click', () => {
+    startBtn.blur();
+    scoreSaved = false;
     overlay.style.display = 'none';
     tetris.start();
 });
 
-
-const rect = tetris.getCanvas().getBoundingClientRect();
-window.dispatchEvent(new CustomEvent('gameReady', { 
-    detail: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
-}));
-
-
-let scoreSaved = false;
+startBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startBtn.blur();
+    scoreSaved = false;
+    overlay.style.display = 'none';
+    tetris.start();
+});
 
 window.addEventListener('gameOver', () => {
     if (!scoreSaved) {
@@ -29,20 +39,6 @@ window.addEventListener('gameOver', () => {
     startBtn.textContent = 'TRY AGAIN';
     overlay.style.display = 'flex';
 });
-
-startBtn.addEventListener('click', () => {
-    scoreSaved = false;
-    overlay.style.display = 'none';
-    tetris.start();
-});
-
-// EGEN KOD FÖR AUTO-REPEAT (kan flyttas till tetris.js senare)
-const keysDown = new Set();
-const gameKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' ', 'z', 'x', 'c']);
-let dasTimer = null;
-let arrTimer = null;
-const DAS = 150; // ms innan auto-repeat startar
-const ARR = 50;  // ms mellan upprepningar
 
 function startMoving(key) {
     tetris.handleInput(key);
@@ -63,8 +59,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (keysDown.has(e.key)) return;
     keysDown.add(e.key);
-    
-    if (['ArrowLeft', 'ArrowRight', 'ArrowDown'].includes(e.key)) {
+    if (['ArrowLeft','ArrowRight','ArrowDown'].includes(e.key)) {
         startMoving(e.key);
     } else {
         tetris.handleInput(e.key);
@@ -74,29 +69,31 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
     keysDown.delete(e.key);
     stopMoving();
-    
-    // om annan rörelsetangent fortfarande hålls in
     if (keysDown.has('ArrowLeft')) startMoving('ArrowLeft');
     else if (keysDown.has('ArrowRight')) startMoving('ArrowRight');
 });
-
 
 function saveHighscore(score) {
     const scores = JSON.parse(localStorage.getItem('tetrisScores') || '[]');
     scores.push({ score, date: new Date().toLocaleDateString('sv-SE') });
     scores.sort((a, b) => b.score - a.score);
-    scores.splice(5); // behåll topp 5
+    scores.splice(5);
     localStorage.setItem('tetrisScores', JSON.stringify(scores));
     renderHighscores(scores);
 }
 
 function renderHighscores(scores) {
     const list = document.getElementById('highscoreList');
-    list.innerHTML = scores
-        .map(s => `<li>${s.date} — ${s.score}</li>`)
-        .join('');
+    list.innerHTML = scores.map(s => `<li>${s.date} — ${s.score}</li>`).join('');
 }
 
-// ladda vid start
-renderHighscores(JSON.parse(localStorage.getItem('tetrisScores') || '[]'));
+window.dispatchEvent(new CustomEvent('gameReady', {
+    detail: {
+        x: canvas.getBoundingClientRect().left,
+        y: canvas.getBoundingClientRect().top,
+        width: canvas.getBoundingClientRect().width,
+        height: canvas.getBoundingClientRect().height
+    }
+}));
 
+renderHighscores(JSON.parse(localStorage.getItem('tetrisScores') || '[]'));
