@@ -90,10 +90,15 @@ startBtn.addEventListener('click', () => {
 startBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     startBtn.blur();
-    scoreSaved = false;
-    hideOverlay();
-    tetris.start();
-    controls.show();
+    if (tetris.isPaused()) {
+        hideOverlay();
+        tetris.resume();
+    } else {
+        scoreSaved = false;
+        hideOverlay();
+        tetris.start();
+        if (controls) controls.show();
+    }
 });
 
 window.addEventListener('gameOver', () => {
