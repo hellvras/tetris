@@ -1,5 +1,4 @@
 import { Konst } from './konst.js';
-import { Circle } from './circle.js';
 import { Path } from './path.js';
 
 const canvas = document.getElementById('background');
@@ -8,9 +7,14 @@ const ctx = canvas.getContext('2d');
 const konst = new Konst(canvas, ctx);
 konst.start();
 
+// window.addEventListener('gameReady', (e) => {
+//     const { x, y, width, height } = e.detail;
+//     konst.setOrigin(x, y, width, height);
+// });
+
 window.addEventListener('gameReady', (e) => {
-    const { x, y, width, height } = e.detail;
-    konst.setOrigin(x, y, width, height);
+    const rect = document.getElementById('game').getBoundingClientRect();
+    konst.setOrigin(rect.left, rect.top, rect.width, rect.height);
 });
 
 let activePath = null;

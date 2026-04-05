@@ -1,23 +1,48 @@
 import { PIECES } from './pieces.js';
 import { drawBlock } from './drawblock.js';
 
-const KICKS = [
-    {x:0,y:0},{x:-1,y:0},{x:1,y:0},{x:-2,y:0},{x:2,y:0},
-    {x:0,y:-1},{x:-1,y:-1},{x:1,y:-1},{x:-2,y:-1},{x:2,y:-1},
-    {x:0,y:-2},{x:-1,y:-2},{x:1,y:-2},{x:-2,y:-2},{x:2,y:-2},
-    {x:0,y:-3},{x:-1,y:-3},{x:1,y:-3}
-];
+const SRS_KICKS = {
+    // J, L, S, T, Z - från tillstånd -> lista med kicks
+    normal: {
+        '0->1': [{x:0,y:0},{x:-1,y:0},{x:-1,y:1},{x:0,y:-2},{x:-1,y:-2}],
+        '1->0': [{x:0,y:0},{x:1,y:0},{x:1,y:-1},{x:0,y:2},{x:1,y:2}],
+        '1->2': [{x:0,y:0},{x:1,y:0},{x:1,y:-1},{x:0,y:2},{x:1,y:2}],
+        '2->1': [{x:0,y:0},{x:-1,y:0},{x:-1,y:1},{x:0,y:-2},{x:-1,y:-2}],
+        '2->3': [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:-2},{x:1,y:-2}],
+        '3->2': [{x:0,y:0},{x:-1,y:0},{x:-1,y:-1},{x:0,y:2},{x:-1,y:2}],
+        '3->0': [{x:0,y:0},{x:-1,y:0},{x:-1,y:-1},{x:0,y:2},{x:-1,y:2}],
+        '0->3': [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:-2},{x:1,y:-2}],
+    },
+    I: {
+        '0->1': [{x:0,y:0},{x:-2,y:0},{x:1,y:0},{x:-2,y:-1},{x:1,y:2}],
+        '1->0': [{x:0,y:0},{x:2,y:0},{x:-1,y:0},{x:2,y:1},{x:-1,y:-2}],
+        '1->2': [{x:0,y:0},{x:-1,y:0},{x:2,y:0},{x:-1,y:2},{x:2,y:-1}],
+        '2->1': [{x:0,y:0},{x:1,y:0},{x:-2,y:0},{x:1,y:-2},{x:-2,y:1}],
+        '2->3': [{x:0,y:0},{x:2,y:0},{x:-1,y:0},{x:2,y:1},{x:-1,y:-2}],
+        '3->2': [{x:0,y:0},{x:-2,y:0},{x:1,y:0},{x:-2,y:-1},{x:1,y:2}],
+        '3->0': [{x:0,y:0},{x:1,y:0},{x:-2,y:0},{x:1,y:-2},{x:-2,y:1}],
+        '0->3': [{x:0,y:0},{x:-1,y:0},{x:2,y:0},{x:-1,y:2},{x:2,y:-1}],
+    }
+};
 
 export class Piece {
     #shape; #color; #x; #y;
+    #rotation = 0; // 0, 1, 2, 3
+    #type;
     
     constructor(type, x, y) {
         const { shape, color } = PIECES[type];
         this.#shape = shape;
         this.#color = color;
+        this.#type = type;
+        this.#rotation = 0;
         this.#x = x;
         this.#y = y;
     }
+    
+    getX() { return this.#x; }
+    getY() { return this.#y; }
+    getShape() { return this.#shape; }
 
     canMove(dx, dy, board, rows, cols) {
         return this.#shape.every((row, rowIndex) =>
@@ -56,7 +81,13 @@ export class Piece {
         const prevShape = this.#shape;
         const prevX = this.#x;
         const prevY = this.#y;
+        const prevRotation = this.#rotation;
         const size = this.#shape.length;
+
+        const nextRotation = ((this.#rotation + (dir === 1 ? 1 : 3)) % 4);
+        const key = `${this.#rotation}->${nextRotation}`;
+        const kickTable = this.#type === 'I' ? SRS_KICKS.I : SRS_KICKS.normal;
+        const kicks = kickTable[key];
 
         const rotated = Array.from({ length: size }, () => Array(size).fill(0));
         for (let y = 0; y < size; y++) {
@@ -67,15 +98,27 @@ export class Piece {
         }
         this.#shape = rotated;
 
-        for (const { x, y } of KICKS) {
+        for (const { x, y } of kicks) {
             this.#x = prevX + x;
             this.#y = prevY + y;
-            if (this.canMove(0, 0, board, rows, cols)) return;
+            if (this.canMove(0, 0, board, rows, cols)) {
+                this.#rotation = nextRotation;
+                return;
+            }
         }
 
+        // ingen kick funkar – återställ
         this.#shape = prevShape;
         this.#x = prevX;
         this.#y = prevY;
+        this.#rotation = prevRotation;
+    }
+
+    reset() {
+        this.#x = 0;
+        this.#y = 0;
+        this.#rotation = 0;
+        return this;
     }
 
     lock(board) {
@@ -120,12 +163,6 @@ export class Piece {
             })
         );
         return { minX, maxX, width: maxX - minX + 1 };
-    }
-
-    reset() {
-        this.#x = 0;
-        this.#y = 0;
-        return this;
     }
 
     draw(ctx, blockSize, boardOffset = 0) {
