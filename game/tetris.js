@@ -37,23 +37,64 @@ export class Tetris {
     #gameOver = false;
     #inputQueue = [];
 
+    #paused = false;
+
+    #lockAbsolute = null;
+    #lockAbsoluteDelay = 3000;
+    
     constructor(canvas, ctx) {
         this.#canvas = canvas;
+        this.#cols = 10;
+        this.#rows = 20;
+        this.#panelWidth = 120;
+        
+        // Anpassa blockSize efter skärmstorlek
+        const maxWidth = window.innerWidth - 40;
+        const maxBlockSize = 30;
+        const calculatedSize = maxWidth / (this.#cols + 4); // +4 för paneler
+        this.#blockSize = Math.min(maxBlockSize, calculatedSize);
+        
         this.#boardOffset = this.#panelWidth;
+        this.#canvas.width = (this.#panelWidth * 2 + this.#cols) * this.#blockSize;
+        this.#canvas.height = this.#rows * this.#blockSize;
+
         this.#board = new Board(this.#rows, this.#cols);
         this.#renderer = new Renderer(ctx, this.#blockSize, this.#boardOffset, this.#panelWidth, this.#cols, this.#rows);
     }
+
+    #animationId = null;
+    pause() {
+        this.#paused = true;
+        cancelAnimationFrame(this.#animationId);
+    }
+
+    resume() {
+        if (this.#paused) {
+            this.#paused = false;
+            this.#lastDrop = performance.now();
+            this.animate();
+        }
+    }
+
+    togglePause() {
+        if (this.#paused) this.resume();
+        else this.pause();
+    }
+
+    isStarted() { return this.#started; }
+    isPaused()  { return this.#paused; }
 
     getCanvas() { return this.#canvas; }
     getScore()  { return this.#score; }
 
     start() {
+        this.#started = true;
         this.#gameOver  = false;
         this.#score     = 0;
         this.#level     = 1;
         this.#lines     = 0;
         this.#dropInterval = 500;
-        this.#lastDrop  = 0;
+        this.#lastDrop = performance.now();
         this.#lockTimer = null;
         this.#lockMoves = 0;
         this.#clearingLines = [];
@@ -66,8 +107,9 @@ export class Tetris {
         this.animate();
     }
 
+
     animate(timestamp = 0) {
-        if (this.#gameOver) return;
+        if (this.#gameOver || this.#paused) return;
         this.#processInput();
 
         if (this.#clearingLines.length > 0) {
@@ -85,6 +127,9 @@ export class Tetris {
                 if (!this.#currentPiece.moveDown(this.#board.grid, this.#rows, this.#cols)) {
                     if (!this.#lockTimer) {
                         this.#lockTimer = timestamp;
+                        this.#lockAbsolute = timestamp;
+                    } else if (timestamp - this.#lockAbsolute > this.#lockAbsoluteDelay) {
+                        this.#lockAndSpawn(); // låser oavsett moves
                     } else if (timestamp - this.#lockTimer > this.#lockDelay) {
                         this.#lockAndSpawn();
                     }
@@ -97,7 +142,7 @@ export class Tetris {
         }
 
         this.#draw();
-        requestAnimationFrame((ts) => this.animate(ts));
+        this.#animationId = requestAnimationFrame((ts) => this.animate(ts));
     }
 
     #addScore(clearedLines) {
@@ -123,6 +168,7 @@ export class Tetris {
         this.#currentPiece = this.#spawnPiece();
         this.#lockTimer = null;
         this.#lockMoves = 0;
+        this.#lockAbsolute = null;
     }
 
     #fillQueue() {
@@ -165,7 +211,10 @@ export class Tetris {
         this.#renderer.drawPiece(this.#currentPiece);
     }
 
+    #started = false;
+
     handleInput(key) {
+        if (!this.#started) return;
         this.#inputQueue.push(key);
     }
 
@@ -201,14 +250,23 @@ export class Tetris {
                 this.#lockAndSpawn();
                 break;
             case 'ArrowUp':
-            case 'x':
+            case 'x': {
+                const prevX = p.getX();
                 p.rotate(1, b, r, c);
-                this.#lockTimer = null;
+                if (this.#lockTimer !== null && this.#lockMoves < this.#maxLockMoves) {
+                    this.#lockTimer = null;
+                    this.#lockMoves++;
+                }
                 break;
-            case 'z':
+            }
+            case 'z': {
                 p.rotate(-1, b, r, c);
-                this.#lockTimer = null;
+                if (this.#lockTimer !== null && this.#lockMoves < this.#maxLockMoves) {
+                    this.#lockTimer = null;
+                    this.#lockMoves++;
+                }
                 break;
+            }
             case 'c':
                 if (this.#holdUsed) break;
                 if (this.#holdPiece) {
